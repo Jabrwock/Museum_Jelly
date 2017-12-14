@@ -71,6 +71,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.lineageos.jelly.favorite.FavoriteActivity;
 import org.lineageos.jelly.favorite.FavoriteProvider;
@@ -91,17 +92,17 @@ import java.lang.ref.WeakReference;
 
 public class MainActivity extends WebViewExtActivity implements
          SearchBarController.OnCancelListener {
+    public static final String EXTRA_URL = "extra_url";
+    public static final String ACTION_URL_RESOLVED = "org.lineageos.jelly.action.URL_RESOLVED";
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final String PROVIDER = "org.lineageos.jelly.fileprovider";
     private static final String EXTRA_INCOGNITO = "extra_incognito";
     private static final String EXTRA_DESKTOP_MODE = "extra_desktop_mode";
-    public static final String EXTRA_URL = "extra_url";
     private static final String STATE_KEY_THEME_COLOR = "theme_color";
     private static final int STORAGE_PERM_REQ = 423;
     private static final int LOCATION_PERM_REQ = 424;
-
-    public static final String ACTION_URL_RESOLVED = "org.lineageos.jelly.action.URL_RESOLVED";
-
+    private CoordinatorLayout mCoordinator;
+    private WebViewExt mWebView;
     private final BroadcastReceiver mUrlResolvedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -116,9 +117,6 @@ public class MainActivity extends WebViewExtActivity implements
             receiver.send(RESULT_CANCELED, new Bundle());
         }
     };
-
-    private CoordinatorLayout mCoordinator;
-    private WebViewExt mWebView;
     private ProgressBar mLoadingProgress;
     private SearchBarController mSearchController;
     private boolean mHasThemeColorSupport;
@@ -135,6 +133,10 @@ public class MainActivity extends WebViewExtActivity implements
     private WebChromeClient.CustomViewCallback mFullScreenCallback;
 
     private boolean mSearchActive = false;
+
+    /* Idle Timeout */
+    private Handler userInputHandler;
+    private Runnable idleRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -230,12 +232,24 @@ public class MainActivity extends WebViewExtActivity implements
         } catch (IOException e) {
             Log.i(TAG, "HTTP response cache installation failed:" + e);
         }
+
+        /* Set up user idle timeout action */
+        userInputHandler = new Handler();
+        idleRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "User was inactive for 5 minutes",
+                        Toast.LENGTH_LONG).show();
+                mWebView.loadUrl(PrefsUtils.getHomePage(MainActivity.this));
+            }
+        };
     }
 
     @Override
     protected void onStart() {
         super.onStart();
         registerReceiver(mUrlResolvedReceiver, new IntentFilter(ACTION_URL_RESOLVED));
+        startIdleHandler();
     }
 
     @Override
@@ -246,12 +260,14 @@ public class MainActivity extends WebViewExtActivity implements
         if (cache != null) {
             cache.flush();
         }
+        stopIdleHandler();
         super.onStop();
     }
 
     @Override
     public void onPause() {
         mWebView.onPause();
+        stopIdleHandler();
         super.onPause();
     }
 
@@ -267,6 +283,7 @@ public class MainActivity extends WebViewExtActivity implements
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         }
+        startIdleHandler();
     }
 
     @Override
@@ -278,6 +295,7 @@ public class MainActivity extends WebViewExtActivity implements
         } else if (mWebView.canGoBack()) {
             mWebView.goBack();
         } else {
+            stopIdleHandler();
             super.onBackPressed();
         }
     }
@@ -324,6 +342,30 @@ public class MainActivity extends WebViewExtActivity implements
         outState.putBoolean(EXTRA_INCOGNITO, mWebView.isIncognito());
         outState.putBoolean(EXTRA_DESKTOP_MODE, mWebView.isDesktopMode());
         outState.putInt(STATE_KEY_THEME_COLOR, mThemeColor);
+    }
+
+    @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+        stopIdleHandler();
+        startIdleHandler();
+    }
+
+    private void stopIdleHandler() {
+        userInputHandler.removeCallbacks(idleRunnable);
+    }
+
+    private void startIdleHandler() {
+        if (PrefsUtils.getIdleTimeoutMode(this)) {
+            /* idle timeout in prefs is in minutes */
+            int timeout;
+            try {
+                timeout = Integer.parseInt(PrefsUtils.getIdleTimeout(this));
+            } catch (NumberFormatException e) {
+                timeout = 5;
+            }
+            userInputHandler.postDelayed(idleRunnable, timeout * 60 * 1000);
+        }
     }
 
     private void setupMenu() {
@@ -700,11 +742,11 @@ public class MainActivity extends WebViewExtActivity implements
     }
 
     private static class SetAsFavoriteTask extends AsyncTask<Void, Void, Boolean> {
-        private ContentResolver contentResolver;
         private final String title;
         private final String url;
         private final int color;
         private final WeakReference<View> parentView;
+        private ContentResolver contentResolver;
 
         SetAsFavoriteTask(ContentResolver contentResolver, String title, String url,
                           int color, View parentView) {

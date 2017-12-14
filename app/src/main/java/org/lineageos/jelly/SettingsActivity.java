@@ -66,6 +66,18 @@ public class SettingsActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                 return true;
             });
+
+            Preference idleTimeoutMode = findPreference("key_idle_timeout_mode");
+            idleTimeoutMode.setOnPreferenceChangeListener((preference, o) -> {
+                preference.notifyDependencyChange(false);
+                return true;
+            });
+
+            Preference idleTimeout = findPreference("key_idle_timeout");
+            idleTimeout.setOnPreferenceChangeListener((preference, o) -> {
+                preference.setSummary(o.toString());
+                return true;
+            });
         }
 
         private void editHomePage(Preference preference) {
@@ -78,6 +90,7 @@ public class SettingsActivity extends AppCompatActivity {
                     new LinearLayout(context));
             EditText editText = (EditText) homepageView.findViewById(R.id.homepage_edit_url);
             editText.setText(PrefsUtils.getHomePage(context));
+            editText.setSelection(editText.getText().length());
 
             builder.setTitle(R.string.pref_start_page_dialog_title)
                     .setMessage(R.string.pref_start_page_dialog_message)
