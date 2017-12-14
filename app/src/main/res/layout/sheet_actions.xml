@@ -73,4 +73,32 @@
             style="@style/AppTheme.BottomSheetText"
             android:text="@string/menu_download" />
     </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/sheet_reload"
+        style="@style/AppTheme.BottomSheetLayout"
+        android:visibility="gone">
+
+        <ImageView
+            style="@style/AppTheme.BottomSheetIcon"
+            android:src="@drawable/ic_refresh" />
+
+        <TextView
+            style="@style/AppTheme.BottomSheetText"
+            android:text="@string/menu_reload" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/sheet_home"
+        style="@style/AppTheme.BottomSheetLayout"
+        android:visibility="gone">
+
+        <ImageView
+            style="@style/AppTheme.BottomSheetIcon"
+            android:src="@drawable/ic_home" />
+
+        <TextView
+            style="@style/AppTheme.BottomSheetText"
+            android:text="@string/menu_home" />
+    </LinearLayout>
 </LinearLayout>

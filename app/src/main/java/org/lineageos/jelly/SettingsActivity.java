@@ -69,6 +69,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             Preference idleTimeoutMode = findPreference("key_idle_timeout_mode");
             idleTimeoutMode.setOnPreferenceChangeListener((preference, o) -> {
+                /* Enable timeout time to be set */
                 preference.notifyDependencyChange(false);
                 return true;
             });
@@ -76,6 +77,12 @@ public class SettingsActivity extends AppCompatActivity {
             Preference idleTimeout = findPreference("key_idle_timeout");
             idleTimeout.setOnPreferenceChangeListener((preference, o) -> {
                 preference.setSummary(o.toString());
+                return true;
+            });
+
+            Preference kioskMode = findPreference("key_kiosk");
+            kioskMode.setOnPreferenceChangeListener((preference, o) -> {
+                preference.notifyDependencyChange(false);
                 return true;
             });
         }

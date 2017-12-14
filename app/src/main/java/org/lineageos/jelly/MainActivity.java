@@ -142,7 +142,16 @@ public class MainActivity extends WebViewExtActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_main);
+        // Make sure prefs are set before loading them
+        // TODO use inflater to allow easy view switching
+        PreferenceManager.setDefaultValues(this, R.xml.settings, false);
+        if (!PrefsUtils.getKiosk(this)) {
+            setContentView(R.layout.activity_main);
+        } else {
+            // Kiosk mode, move menu to bottom right and go fullscreen
+            setTheme(R.style.AppTheme_NoActionBarKiosk);
+            setContentView(R.layout.activity_main_kiosk);
+        }
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -196,9 +205,6 @@ public class MainActivity extends WebViewExtActivity implements
             desktopMode = savedInstanceState.getBoolean(EXTRA_DESKTOP_MODE, false);
             mThemeColor = savedInstanceState.getInt(STATE_KEY_THEME_COLOR, 0);
         }
-
-        // Make sure prefs are set before loading them
-        PreferenceManager.setDefaultValues(this, R.xml.settings, false);
 
         ImageView incognitoIcon = (ImageView) findViewById(R.id.incognito);
         incognitoIcon.setVisibility(mIncognito ? View.VISIBLE : View.GONE);
@@ -284,6 +290,9 @@ public class MainActivity extends WebViewExtActivity implements
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
         }
         startIdleHandler();
+        if (PrefsUtils.getKiosk(this)) {
+            setImmersiveMode(true);
+        }
     }
 
     @Override
@@ -377,7 +386,11 @@ public class MainActivity extends WebViewExtActivity implements
 
             PopupMenu popupMenu = new PopupMenu(wrapper, menu, Gravity.NO_GRAVITY,
                     R.attr.actionOverflowMenuStyle, 0);
-            popupMenu.inflate(R.menu.menu_main);
+            if (!PrefsUtils.getKiosk(this)) {
+                popupMenu.inflate(R.menu.menu_main);
+            } else {
+                popupMenu.inflate(R.menu.menu_main_kiosk);
+            }
 
             MenuItem desktopMode = popupMenu.getMenu().findItem(R.id.desktop_mode);
             desktopMode.setTitle(getString(isDesktop ?
@@ -392,6 +405,9 @@ public class MainActivity extends WebViewExtActivity implements
                         break;
                     case R.id.menu_incognito:
                         openInNewTab(null, true);
+                        break;
+                    case R.id.menu_home:
+                        mWebView.loadUrl(PrefsUtils.getHomePage(this));
                         break;
                     case R.id.menu_reload:
                         mWebView.reload();
@@ -417,7 +433,7 @@ public class MainActivity extends WebViewExtActivity implements
                         addShortcut();
                         break;
                     case R.id.menu_settings:
-                        startActivity(new Intent(this, SettingsActivity.class));
+                        loadActivityWithPin(this, SettingsActivity.class);
                         break;
                     case R.id.desktop_mode:
                         mWebView.setDesktopMode(!isDesktop);
@@ -430,7 +446,7 @@ public class MainActivity extends WebViewExtActivity implements
                 return true;
             });
 
-            // Fuck you, lint
+            // Lint doesn't like this code
             //noinspection RestrictedApi
             MenuPopupHelper helper = new MenuPopupHelper(wrapper,
                     (MenuBuilder) popupMenu.getMenu(), menu);
@@ -439,6 +455,10 @@ public class MainActivity extends WebViewExtActivity implements
             //noinspection RestrictedApi
             helper.show();
         });
+    }
+
+    private void loadActivityWithPin(Context context, Class<?> cls) {
+        startActivity(new Intent(context, cls));
     }
 
     private void showSearch() {

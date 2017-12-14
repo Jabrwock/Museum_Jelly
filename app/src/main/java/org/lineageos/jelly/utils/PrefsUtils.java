@@ -34,6 +34,7 @@ public final class PrefsUtils {
     private static final String KEY_SUGGESTION_PROVIDER = "key_suggestion_provider";
     private static final String KEY_IDLE_TIMEOUT_MODE = "key_idle_timeout_mode";
     private static final String KEY_IDLE_TIMEOUT = "key_idle_timeout";
+    private static final String KEY_KIOSK = "key_kiosk";
 
     private PrefsUtils() {
     }
@@ -106,6 +107,11 @@ public final class PrefsUtils {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         return prefs.getString(KEY_IDLE_TIMEOUT,
                 context.getString(R.string.default_idle_timeout));
+    }
+
+    public static boolean getKiosk(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean(KEY_KIOSK, false);
     }
 
     public static void setHomePage(Context context, String value) {
